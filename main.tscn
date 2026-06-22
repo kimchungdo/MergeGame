@@ -1,11 +1,15 @@
 [gd_scene format=3 uid="uid://cdwmd26spkavh"]
 
-[ext_resource type="PackedScene" uid="uid://bgtu48cyp6edp" path="res://item.tscn" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://bxn61gl8i084i" path="res://main.gd" id="1_0xm2m"]
 
 [node name="Main" type="Node2D" unique_id=729151075]
+script = ExtResource("1_0xm2m")
 
-[node name="Item" parent="." unique_id=1647006750 instance=ExtResource("1_ig7tw")]
-position = Vector2(497, 320)
+[node name="Button" type="Button" parent="." unique_id=1481944820]
+offset_left = 185.0
+offset_top = 80.0
+offset_right = 278.0
+offset_bottom = 124.0
+text = "아이템 생성"
 
-[node name="Item2" parent="." unique_id=1787555897 instance=ExtResource("1_ig7tw")]
-position = Vector2(546, 313)
+[connection signal="pressed" from="Button" to="." method="_on_button_pressed"]
