@@ -1,0 +1,14 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Godot-specific ignores
+.godot/
+modules/
+
+# Avoid tracking binary exports
+bin/
+build/
+
+# Crash dumps can be large
+*.log

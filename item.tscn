@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://bgtu48cyp6edp"]
+
+[ext_resource type="Script" uid="uid://brj4segvrq27n" path="res://item.gd" id="1_baxfk"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_6ba1t"]
+
+[node name="Item" type="Area2D" unique_id=2145640643]
+script = ExtResource("1_baxfk")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1270739375]
+shape = SubResource("RectangleShape2D_6ba1t")
+
+[node name="Label" type="Label" parent="." unique_id=1085936366]
+offset_right = 40.0
+offset_bottom = 23.0
+text = "1"
