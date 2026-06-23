@@ -78,11 +78,12 @@ func find_empty_slot():
 	return null # 빈 칸이 없으면 null 반환
 
 
-# 1. 화면 좌표(X, Y)를 넣으면 역으로 몇 행 몇 열인지 계산해주는 함수
+# 🎯 [수정] 50% 이상만 겹쳐도 해당 칸으로 인정해주는 Threshold 보정 버전
 func get_grid_index(global_pos: Vector2):
-	# 시작 위치와 타일 사이즈를 기준으로 마우스가 위치한 칸의 인덱스를 계산합니다.
-	var c = floor((global_pos.x - START_POS.x) / TILE_SIZE)
-	var r = floor((global_pos.y - START_POS.y) / TILE_SIZE)
+	# 타일의 중심점을 기준으로 반올림(round)을 하여 
+	# 유저가 대충 절반 이상 걸치게 놓으면 그 칸으로 가독성 있게 매칭해줍니다.
+	var c = round((global_pos.x - START_POS.x) / TILE_SIZE)
+	var r = round((global_pos.y - START_POS.y) / TILE_SIZE)
 	
 	# 계산된 인덱스가 7x9 보드판 내부라면 Vector2(행, 열)로 반환
 	if r >= 0 and r < GRID_ROWS and c >= 0 and c < GRID_COLS:
@@ -95,36 +96,49 @@ func get_grid_position(r: int, c: int) -> Vector2:
 	var y = START_POS.y + (r * TILE_SIZE)
 	return Vector2(x, y)
 
-# 3. [핵심] 아이템이 드래그를 마쳤을 때 호출할 이동 요청 함수
+# [수정] 아이템이 드래그를 마쳤을 때 호출할 통합 제어 함수 (이동 및 머지 판단)
 func request_move_item(item, release_global_pos: Vector2, old_r: int, old_c: int) -> bool:
 	var target_index = get_grid_index(release_global_pos)
 	
-	# 조건 A: 판 바깥에 떨어뜨렸다면 이동 실패
+	# 조건 A: 판 바깥에 떨어뜨렸다면 무조건 복귀
 	if target_index == null:
 		return false
 		
 	var new_r = target_index.x
 	var new_c = target_index.y
 	
-	# 조건 B: 원래 자리에 고대로 놓은 경우 (이동 성공 처리하여 제자리 스냅)
+	# 조건 B: 원래 자리에 고대로 놓은 경우 (제자리 스냅 성공 처리)
 	if old_r == new_r and old_c == new_c:
 		item.global_position = get_grid_position(old_r, old_c)
 		return true
 		
-	# 조건 C: 이동할 자리가 완벽히 비어있는(null) 경우에만 이동 허용!
+	# 조건 C: 이동할 자리가 완벽히 비어있는(null) 경우 -> 부드럽게 이동
 	if grid[new_r][new_c] == null:
 		grid[old_r][old_c] = null # 이전 자리는 비우고
 		grid[new_r][new_c] = item # 새 자리에 아이템 등록
 		
-		# 아이템의 위치를 해당 그리드 칸의 정확한 좌표로 보정
-		item.global_position = get_grid_position(new_r, new_c)
-		
-		# 아이템이 기억하는 본인의 행/열 정보 갱신 (item.gd에 해당 변수가 있어야 함)
+		# 아이템의 정보 및 화면 위치 갱신
 		item.grid_r = new_r
 		item.grid_c = new_c
-		print("이동 성공: [", old_r, ",", old_c, "] -> [", new_r, ",", new_c, "]")
+		item.global_position = get_grid_position(new_r, new_c)
+		print("이동 완료: [", old_r, ",", old_c, "] -> [", new_r, ",", new_c, "]")
 		return true
 		
-	# 조건 D: 이미 다른 아이템이 있다면 이동 실패
-	print("이동 실패: 이미 아이템이 있는 칸입니다.")
-	return false
+	# 💡 조건 D: [핵심] 이동할 자리에 이미 다른 아이템이 있는 경우!
+	else:
+		var other_item = grid[new_r][new_c]
+		
+		# 1. 두 아이템의 레벨이 같다면 머지(합치기) 진행!
+		if other_item.level == item.level:
+			grid[old_r][old_c] = null # 내가 있던 자리는 빈칸으로 만듦
+			
+			other_item.level_up() # 상대방 아이템 레벨 업 (+ 비주얼 갱신)
+			item.queue_free() # 나 자신은 무대에서 삭제
+			
+			print("머지 성공! 레벨 업: [", new_r, ",", new_c, "]")
+			return true # 머지도 성공 처리를 하여 원래 자리로 튕겨 나가지 않게 함
+			
+		# 2. 레벨이 다르다면? 자리 차지가 불가능하므로 실패 처리 (원래 자리로 복귀)
+		else:
+			print("이동 실패: 레벨이 다른 아이템이 선점하고 있습니다.")
+			return false

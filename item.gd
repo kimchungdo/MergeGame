@@ -55,7 +55,39 @@ func level_up():
 	update_visual()
 	print("아이템 레벨업! 현재 레벨: ", level)
 
-# 화면에 레벨 숫자를 갱신해주는 함수
+# 🎨 프로토타입용 1~10단계 바닷속 마법 아이템 이름 및 색상 테이블
+const ITEM_DATA = {
+	1: {"name": "초록 해초", "color": Color("2ecc71")},       # 연초록
+	2: {"name": "분홍 조개", "color": Color("ff7979")},       # 분홍
+	3: {"name": "심해 조개", "color": Color("0984e3")},       # 파랑
+	4: {"name": "빛나는 조개", "color": Color("00cec9")},     # 청록
+	5: {"name": "자그만 백진주", "color": Color("dfe6e9")},   # 밝은 회백색
+	6: {"name": "은은한 흑진주", "color": Color("2d3436")},   # 짙은 흑색
+	7: {"name": "황금 진주", "color": Color("fdcb6e")},       # 황금색
+	8: {"name": "심해 룬 진주", "color": Color("6c5ce7")},    # 보라색
+	9: {"name": "산호 왕관", "color": Color("e84393")},       # 진분홍
+	10: {"name": "포세이돈의 핵", "color": Color("ffeaa7")}   # 번쩍이는 연황금
+}
+
+# 레벨 숫자에 맞춰 사각형 색상과 텍스트를 자동으로 갈아끼우는 함수
 func update_visual():
-	if has_node("Label"):
-		$Label.text = str(level)
+	# 1. 안전하게 하위 노드들이 로드되었는지 확인
+	if not has_node("ColorRect") or not has_node("Label"):
+		return
+		
+	# 2. 현재 레벨이 데이터 테이블에 있는지 체크 (최대 10단계 예외처리)
+	var current_lvl = level
+	if current_lvl > 10: 
+		current_lvl = 10
+		
+	var data = ITEM_DATA[current_lvl]
+	
+	# 3. [핵심] 기존의 심심한 회색 박스 색상을 마법 아이템 톤으로 강제 변경!
+	$ColorRect.color = data["color"]
+	
+	# 4. 글자판에 [레벨]과 [아이템 이름]을 동시에 뿌려 가독성을 높입니다.
+	$Label.text = "Lv." + str(level) + "\n" + data["name"]
+	
+	# 글자가 박스 밖으로 삐져나가지 않게 라벨 세팅 보정 (프로토타입용)
+	$Label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	$Label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
