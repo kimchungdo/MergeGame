@@ -21,28 +21,45 @@ func _ready():
 
 # 버튼이 눌렸을 때 실행되는 함수
 func _on_button_pressed():
-	# 빈 칸 찾기
-	var empty_slot = find_empty_slot()
+	# 1. 보드판 전체에서 "비어있는 칸들"의 좌표를 배열로 싹 긁어 모읍니다.
+	var empty_slots = get_all_empty_slots()
 	
-	if empty_slot == null:
+	# 2. 만약 비어있는 칸이 하나도 없다면 게임 오버 처리
+	if empty_slots.is_empty():
 		print("보드판이 가득 찼습니다!")
 		return
 		
-	var r = empty_slot.x
-	var c = empty_slot.y
+	# 3. [핵심] 빈 칸 목록(empty_slots) 중에서 무작위로 하나를 추첨합니다.
+	# randi() % 배열크기 -> 배열의 랜덤 인덱스를 뽑아냅니다.
+	var random_index = randi() % empty_slots.size()
+	var chosen_slot = empty_slots[random_index]
 	
-	# 아이템 생성 및 배치
-	var new_item = item_scene.instantiate()
+	var r = chosen_slot.x
+	var c = chosen_slot.y
 	
-	# 행(r)과 열(c) 번호를 기반으로 화면상의 실제 좌표(X, Y) 계산
+	# 4. 행(r)과 열(c) 번호를 기반으로 화면상의 실제 좌표(X, Y) 계산
 	var spawn_x = START_POS.x + (c * TILE_SIZE)
 	var spawn_y = START_POS.y + (r * TILE_SIZE)
+	
+	# 5. 아이템 생성 및 배치
+	var new_item = item_scene.instantiate()
 	new_item.global_position = Vector2(spawn_x, spawn_y)
 	
 	# 생성된 아이템을 무대에 추가하고 그리드 데이터에 등록
 	add_child(new_item)
 	grid[r][c] = new_item
-	print("그리드 [", r, ", ", c, "] 위치에 아이템 생성!")
+	print("그리드 [", r, ", ", c, "] 위치에 랜덤 생성!")
+
+
+# 🛠️ 바둑판 전체를 샅샅이 뒤져서 '모든 빈 칸(null)'의 좌표를 배열로 돌려주는 함수
+func get_all_empty_slots() -> Array:
+	var slots = []
+	for r in GRID_ROWS:
+		for c in GRID_COLS:
+			if grid[r][c] == null:
+				# 빈 칸의 행, 열 위치를 Vector2에 담아 리스트에 추가
+				slots.append(Vector2(r, c))
+	return slots
 
 # 바둑판을 뒤져서 가장 먼저 나오는 빈 칸(null)의 위치를 반환하는 함수
 func find_empty_slot():
