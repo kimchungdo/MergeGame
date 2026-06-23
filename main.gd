@@ -3,10 +3,10 @@ extends Node2D
 @export var item_scene: PackedScene = preload("res://item.tscn")
 
 # 1. 그리드 설정 (예: 4행 4열 바둑판)
-const GRID_ROWS = 4
-const GRID_COLS = 4
-const TILE_SIZE = 100 # 칸과 칸 사이의 간격 (픽셀)
-const START_POS = Vector2(200, 200) # 그리드가 시작될 화면 좌측 상단 위치
+const GRID_ROWS = 9
+const GRID_COLS = 7
+const TILE_SIZE = 90 # 칸과 칸 사이의 간격 (픽셀)
+const START_POS = Vector2(45, 250) # 그리드가 시작될 화면 좌측 상단 위치
 
 # 2. 바둑판의 칸들이 비어있는지 채워져 있는지 기억할 2차원 배열
 var grid = []
