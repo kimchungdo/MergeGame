@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://cdwmd26spkavh"]
+[gd_scene format=3 uid="uid://cbd8fh1j8txw4"]
 
-[ext_resource type="Script" uid="uid://bxn61gl8i084i" path="res://scripts/main.gd" id="1_0xm2m"]
+[ext_resource type="Script" path="res://main.gd" id="1_0xm2m"]
 
 [node name="Main" type="Node2D" unique_id=729151075]
 script = ExtResource("1_0xm2m")
@@ -18,17 +18,8 @@ mouse_filter = 2
 
 [node name="Button" type="Button" parent="CanvasLayer/Control" unique_id=1481944820]
 layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -140.0
-offset_top = -100.0
-offset_right = 140.0
-offset_bottom = -20.0
-grow_horizontal = 2
-grow_vertical = 0
+offset_right = 93.0
+offset_bottom = 31.0
 text = "아이템 생성"
 
 [connection signal="pressed" from="CanvasLayer/Control/Button" to="." method="_on_button_pressed"]

@@ -2,143 +2,164 @@ extends Node2D
 
 @export var item_scene: PackedScene = preload("res://scenes/item.tscn")
 
-# 1. 그리드 설정 (예: 4행 4열 바둑판)
 const GRID_ROWS = 9
 const GRID_COLS = 7
-const TILE_SIZE = 90 # 칸과 칸 사이의 간격 (픽셀)
-const START_POS = Vector2(45, 250) # 그리드가 시작될 화면 좌측 상단 위치
+const DESIGN_VIEWPORT := Vector2(1080, 1920)
+const MIN_TILE_SIZE := 64
 
-# 2. 바둑판의 칸들이 비어있는지 채워져 있는지 기억할 2차원 배열
+# 머지 화면 비율: 상단 HUD · 중앙 보드 · 하단 액션 버튼
+const MARGIN_X_RATIO := 0.05
+const TOP_HUD_RATIO := 0.11
+const BOTTOM_ACTION_RATIO := 0.16
+const BUTTON_ZONE_MIN_HEIGHT := 120.0
+
+var tile_size: float = 90.0
+var start_pos := Vector2.ZERO
+var board_size := Vector2.ZERO
+
 var grid = []
 
 func _ready():
-	# 게임이 시작되면 4x4 빈 바둑판 데이터를 초기화합니다. (null로 채움)
 	for r in GRID_ROWS:
 		var row = []
 		for c in GRID_COLS:
 			row.append(null)
 		grid.append(row)
 
-# 버튼이 눌렸을 때 실행되는 함수
+	_recalculate_layout()
+	get_viewport().size_changed.connect(_on_viewport_size_changed)
+
+func _on_viewport_size_changed() -> void:
+	_recalculate_layout()
+
+func _get_viewport_size() -> Vector2:
+	var size := get_viewport_rect().size
+	if size.x <= 0.0 or size.y <= 0.0:
+		return DESIGN_VIEWPORT
+	return size
+
+func _recalculate_layout() -> void:
+	var viewport_size := _get_viewport_size()
+
+	var margin_x := viewport_size.x * MARGIN_X_RATIO
+	var margin_top := viewport_size.y * TOP_HUD_RATIO
+	var button_zone := maxf(viewport_size.y * BOTTOM_ACTION_RATIO, BUTTON_ZONE_MIN_HEIGHT)
+	var available_w := viewport_size.x - margin_x * 2.0
+	var available_h := viewport_size.y - margin_top - button_zone
+
+	var tile_by_width := floorf(available_w / float(GRID_COLS))
+	var tile_by_height := floorf(available_h / float(GRID_ROWS))
+	tile_size = minf(tile_by_width, tile_by_height)
+	if GRID_ROWS * tile_size > available_h:
+		tile_size = floorf(available_h / float(GRID_ROWS))
+	tile_size = maxf(MIN_TILE_SIZE, tile_size)
+
+	board_size = Vector2(GRID_COLS * tile_size, GRID_ROWS * tile_size)
+	start_pos.x = (viewport_size.x - board_size.x) / 2.0 + tile_size * 0.5
+	start_pos.y = margin_top + maxf(0.0, (available_h - board_size.y) / 2.0) + tile_size * 0.5
+
+	var max_board_bottom := viewport_size.y - button_zone
+	var board_bottom := start_pos.y + (GRID_ROWS - 1) * tile_size + tile_size * 0.5
+	if board_bottom > max_board_bottom:
+		start_pos.y -= board_bottom - max_board_bottom
+
+	_reposition_grid_items()
+
+func _reposition_grid_items() -> void:
+	for r in GRID_ROWS:
+		for c in GRID_COLS:
+			var item = grid[r][c]
+			if item == null:
+				continue
+			if item.has_method("configure_tile_size"):
+				item.configure_tile_size(tile_size)
+			item.global_position = get_grid_position(r, c)
+
 func _on_button_pressed():
-	# 1. 보드판 전체에서 "비어있는 칸들"의 좌표를 배열로 싹 긁어 모읍니다.
 	var empty_slots = get_all_empty_slots()
-	
-	# 2. 만약 비어있는 칸이 하나도 없다면 게임 오버 처리
+
 	if empty_slots.is_empty():
 		print("보드판이 가득 찼습니다!")
 		return
-		
-	# 3. [핵심] 빈 칸 목록(empty_slots) 중에서 무작위로 하나를 추첨합니다.
-	# randi() % 배열크기 -> 배열의 랜덤 인덱스를 뽑아냅니다.
+
 	var random_index = randi() % empty_slots.size()
 	var chosen_slot = empty_slots[random_index]
-	
-	var r = chosen_slot.x
-	var c = chosen_slot.y
-	
-	# 4. 행(r)과 열(c) 번호를 기반으로 화면상의 실제 좌표(X, Y) 계산
-	var spawn_x = START_POS.x + (c * TILE_SIZE)
-	var spawn_y = START_POS.y + (r * TILE_SIZE)
-	
-	# 5. 아이템 생성 및 배치
-	var new_item = item_scene.instantiate()
-	new_item.global_position = Vector2(spawn_x, spawn_y)
 
-	# _on_button_pressed 함수 내부 맨 아래 변수 심는 부분 수정
-	add_child(new_item)
-	grid[r][c] = new_item
-	
-	# 생성된 아이템에게 자기가 몇 행 몇 열에 배치되었는지 변수로 알려줍니다.
+	var r = int(chosen_slot.x)
+	var c = int(chosen_slot.y)
+
+	var new_item = item_scene.instantiate()
+	if new_item.has_method("configure_tile_size"):
+		new_item.configure_tile_size(tile_size)
+	new_item.global_position = get_grid_position(r, c)
 	new_item.grid_r = r
 	new_item.grid_c = c
-	
-	# 생성된 아이템을 무대에 추가하고 그리드 데이터에 등록
+
 	add_child(new_item)
 	grid[r][c] = new_item
 	print("그리드 [", r, ", ", c, "] 위치에 랜덤 생성!")
 
-
-# 🛠️ 바둑판 전체를 샅샅이 뒤져서 '모든 빈 칸(null)'의 좌표를 배열로 돌려주는 함수
 func get_all_empty_slots() -> Array:
 	var slots = []
 	for r in GRID_ROWS:
 		for c in GRID_COLS:
 			if grid[r][c] == null:
-				# 빈 칸의 행, 열 위치를 Vector2에 담아 리스트에 추가
 				slots.append(Vector2(r, c))
 	return slots
 
-# 바둑판을 뒤져서 가장 먼저 나오는 빈 칸(null)의 위치를 반환하는 함수
 func find_empty_slot():
 	for r in GRID_ROWS:
 		for c in GRID_COLS:
 			if grid[r][c] == null:
-				return Vector2(r, c) # 행, 열 위치 반환
-	return null # 빈 칸이 없으면 null 반환
+				return Vector2(r, c)
+	return null
 
-
-# 🎯 [수정] 50% 이상만 겹쳐도 해당 칸으로 인정해주는 Threshold 보정 버전
 func get_grid_index(global_pos: Vector2):
-	# 타일의 중심점을 기준으로 반올림(round)을 하여 
-	# 유저가 대충 절반 이상 걸치게 놓으면 그 칸으로 가독성 있게 매칭해줍니다.
-	var c = round((global_pos.x - START_POS.x) / TILE_SIZE)
-	var r = round((global_pos.y - START_POS.y) / TILE_SIZE)
-	
-	# 계산된 인덱스가 7x9 보드판 내부라면 Vector2(행, 열)로 반환
+	var c = round((global_pos.x - start_pos.x) / tile_size)
+	var r = round((global_pos.y - start_pos.y) / tile_size)
+
 	if r >= 0 and r < GRID_ROWS and c >= 0 and c < GRID_COLS:
 		return Vector2(r, c)
 	return null
 
-# 2. 행(r), 열(c) 인덱스를 넣으면 그 칸의 정확한 화면 중심 좌표를 돌려주는 함수
 func get_grid_position(r: int, c: int) -> Vector2:
-	var x = START_POS.x + (c * TILE_SIZE)
-	var y = START_POS.y + (r * TILE_SIZE)
+	var x = start_pos.x + (c * tile_size)
+	var y = start_pos.y + (r * tile_size)
 	return Vector2(x, y)
 
-# [수정] 아이템이 드래그를 마쳤을 때 호출할 통합 제어 함수 (이동 및 머지 판단)
 func request_move_item(item, release_global_pos: Vector2, old_r: int, old_c: int) -> bool:
 	var target_index = get_grid_index(release_global_pos)
-	
-	# 조건 A: 판 바깥에 떨어뜨렸다면 무조건 복귀
+
 	if target_index == null:
 		return false
-		
-	var new_r = target_index.x
-	var new_c = target_index.y
-	
-	# 조건 B: 원래 자리에 고대로 놓은 경우 (제자리 스냅 성공 처리)
+
+	var new_r = int(target_index.x)
+	var new_c = int(target_index.y)
+
 	if old_r == new_r and old_c == new_c:
 		item.global_position = get_grid_position(old_r, old_c)
 		return true
-		
-	# 조건 C: 이동할 자리가 완벽히 비어있는(null) 경우 -> 부드럽게 이동
+
 	if grid[new_r][new_c] == null:
-		grid[old_r][old_c] = null # 이전 자리는 비우고
-		grid[new_r][new_c] = item # 새 자리에 아이템 등록
-		
-		# 아이템의 정보 및 화면 위치 갱신
+		grid[old_r][old_c] = null
+		grid[new_r][new_c] = item
+
 		item.grid_r = new_r
 		item.grid_c = new_c
 		item.global_position = get_grid_position(new_r, new_c)
 		print("이동 완료: [", old_r, ",", old_c, "] -> [", new_r, ",", new_c, "]")
 		return true
-		
-	# 💡 조건 D: [핵심] 이동할 자리에 이미 다른 아이템이 있는 경우!
 	else:
 		var other_item = grid[new_r][new_c]
-		
-		# 1. 두 아이템의 레벨이 같다면 머지(합치기) 진행!
+
 		if other_item.level == item.level:
-			grid[old_r][old_c] = null # 내가 있던 자리는 빈칸으로 만듦
-			
-			other_item.level_up() # 상대방 아이템 레벨 업 (+ 비주얼 갱신)
-			item.queue_free() # 나 자신은 무대에서 삭제
-			
+			grid[old_r][old_c] = null
+
+			other_item.level_up()
+			item.queue_free()
+
 			print("머지 성공! 레벨 업: [", new_r, ",", new_c, "]")
-			return true # 머지도 성공 처리를 하여 원래 자리로 튕겨 나가지 않게 함
-			
-		# 2. 레벨이 다르다면? 자리 차지가 불가능하므로 실패 처리 (원래 자리로 복귀)
+			return true
 		else:
 			print("이동 실패: 레벨이 다른 아이템이 선점하고 있습니다.")
 			return false

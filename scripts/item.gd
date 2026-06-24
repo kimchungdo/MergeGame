@@ -11,9 +11,26 @@ var grid_c: int = 0
 var is_dragging: bool = false
 var drag_offset: Vector2 = Vector2.ZERO
 var start_position: Vector2 = Vector2.ZERO
+var tile_size: float = 90.0
 
-@onready var label: Label = $Label # 레벨을 눈으로 확인하기 위한 텍스트
-@onready var main_node = get_node("/root/Main") # [추가] Main 스크립트 함수를 호출하기 위한 경로
+@onready var label: Label = $Label
+@onready var main_node = get_node("/root/Main")
+
+func configure_tile_size(size: float) -> void:
+	tile_size = size
+	var half := size / 2.0
+	$ColorRect.set_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
+	$ColorRect.offset_left = -half
+	$ColorRect.offset_top = -half
+	$ColorRect.offset_right = half
+	$ColorRect.offset_bottom = half
+	$Label.set_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
+	$Label.offset_left = -half
+	$Label.offset_top = -half
+	$Label.offset_right = half
+	$Label.offset_bottom = half
+	var shape := $CollisionShape2D.shape as RectangleShape2D
+	shape.size = Vector2(size, size)
 
 func _ready():
 	start_position = global_position
@@ -28,26 +45,23 @@ func _process(_delta):
 # 드래그 앤 드롭 입력 처리
 func _on_input_event(_viewport, event, _shape_idx):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		if event.pressed:
-			# 드래그 시작
-			is_dragging = true
-			# [수정] 튕겨 돌아갈 기준점을 '드래그를 막 시작한 현재 위치'로 고정
-			start_position = global_position 
-			drag_offset = get_global_mouse_position() - global_position
-			z_index = 10 # 드래그 중인 아이템이 다른 아이템들 위로 보이도록 레이어 업
-			
-		elif !event.pressed and is_dragging:
-			# 드래그 끝 (마우스를 뗌)
-			is_dragging = false
-			z_index = 0 # 레이어 원상 복구
-			
-			# [수정] 기존 check_merge_target 대신 Main에게 빈칸 체크 및 이동 요청을 보냅니다.
-			# 마우스를 뗀 현재 global_position과 자신이 원래 있던 행/열(grid_r, grid_c)을 같이 던집니다.
-			var success = main_node.request_move_item(self, global_position, grid_r, grid_c)
-			
-			# Main이 "그 자리는 이미 찬 칸이거나 판 밖이라 이동 불가(false)"라고 하면 원래 자리로 롤백
-			if not success:
-				global_position = start_position
+		_handle_drag_press(event.pressed)
+	elif event is InputEventScreenTouch:
+		_handle_drag_press(event.pressed)
+
+func _handle_drag_press(pressed: bool) -> void:
+	if pressed:
+		is_dragging = true
+		start_position = global_position
+		drag_offset = get_global_mouse_position() - global_position
+		z_index = 10
+	elif is_dragging:
+		is_dragging = false
+		z_index = 0
+
+		var success = main_node.request_move_item(self, global_position, grid_r, grid_c)
+		if not success:
+			global_position = start_position
 
 # 레벨업 시 실행되는 함수
 func level_up():
