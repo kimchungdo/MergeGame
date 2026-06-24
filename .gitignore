@@ -18,5 +18,9 @@ dist/
 # Local build configuration
 tools/godot_path.local.bat
 
+# Editor / IDE (machine-specific)
+.cursor/
+.vscode/
+
 # Crash dumps can be large
 *.log
