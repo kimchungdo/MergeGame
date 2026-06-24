@@ -1,0 +1,5 @@
+@echo off
+:: PC별 Godot 실행 파일 경로 설정 예시
+:: 이 파일을 godot_path.local.bat 로 복사한 뒤 본인 PC 경로로 수정하세요.
+::   copy godot_path.local.bat.example godot_path.local.bat
+set GODOT_PATH=C:\Godot\Godot_v4.7-stable_win64.exe

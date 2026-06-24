@@ -3,12 +3,24 @@
 /android/
 
 # Godot-specific ignores
-.godot/
 modules/
 
 # Avoid tracking binary exports
 bin/
 build/
+dist/
+
+# Android build artifacts
+*.apk
+*.apk.idsig
+*.aab
+
+# Local build configuration
+tools/godot_path.local.bat
+
+# Editor / IDE (machine-specific)
+.cursor/
+.vscode/
 
 # Crash dumps can be large
 *.log
