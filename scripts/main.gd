@@ -89,13 +89,13 @@ func _on_button_pressed():
 	var c = int(chosen_slot.y)
 
 	var new_item = item_scene.instantiate()
-	if new_item.has_method("configure_tile_size"):
-		new_item.configure_tile_size(tile_size)
 	new_item.global_position = get_grid_position(r, c)
 	new_item.grid_r = r
 	new_item.grid_c = c
 
 	add_child(new_item)
+	if new_item.has_method("configure_tile_size"):
+		new_item.configure_tile_size(tile_size)
 	grid[r][c] = new_item
 	print("그리드 [", r, ", ", c, "] 위치에 랜덤 생성!")
 
@@ -152,7 +152,7 @@ func request_move_item(item, release_global_pos: Vector2, old_r: int, old_c: int
 	else:
 		var other_item = grid[new_r][new_c]
 
-		if other_item.level == item.level:
+		if other_item.level == item.level and item.level < MergeItem.MAX_LEVEL:
 			grid[old_r][old_c] = null
 
 			other_item.level_up()
@@ -161,5 +161,5 @@ func request_move_item(item, release_global_pos: Vector2, old_r: int, old_c: int
 			print("머지 성공! 레벨 업: [", new_r, ",", new_c, "]")
 			return true
 		else:
-			print("이동 실패: 레벨이 다른 아이템이 선점하고 있습니다.")
+			print("이동 실패: 머지할 수 없는 칸입니다.")
 			return false
